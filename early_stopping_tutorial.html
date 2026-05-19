@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Early Stopping – Machine Learning Tutorial</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --text: #0a0a0a;
+    --muted: #555;
+    --border: #e0e0e0;
+    --code-bg: #f4f4f4;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-weight: 300;
+    overflow-x: hidden;
+    line-height: 1.8;
+  }
+
+  /* ── CANVAS ── */
+  #bubble-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.55;
+  }
+
+  /* ── LAYOUT ── */
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 28px 120px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 110px 0 70px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 70px;
+  }
+
+  .hero-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 22px;
+    display: block;
+  }
+
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.6rem, 6vw, 4.2rem);
+    font-weight: 900;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 26px;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    font-weight: 700;
+  }
+
+  .hero-sub {
+    font-size: 1.15rem;
+    color: var(--muted);
+    max-width: 580px;
+    line-height: 1.7;
+  }
+
+  /* ── TABLE OF CONTENTS ── */
+  .toc {
+    background: var(--code-bg);
+    border-left: 3px solid var(--text);
+    padding: 24px 28px;
+    margin-bottom: 70px;
+    border-radius: 0 6px 6px 0;
+  }
+
+  .toc-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  .toc ol {
+    padding-left: 20px;
+  }
+
+  .toc li {
+    margin-bottom: 6px;
+  }
+
+  .toc a {
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.95rem;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s;
+  }
+
+  .toc a:hover { border-bottom-color: var(--text); }
+
+  /* ── SECTIONS ── */
+  section {
+    margin-bottom: 80px;
+    scroll-margin-top: 40px;
+  }
+
+  .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.7rem, 3.5vw, 2.4rem);
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--text);
+    margin-bottom: 28px;
+    letter-spacing: -0.01em;
+  }
+
+  h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 38px 0 14px;
+    color: var(--text);
+  }
+
+  p {
+    font-size: 1.03rem;
+    color: #1a1a1a;
+    margin-bottom: 18px;
+    line-height: 1.85;
+  }
+
+  /* ── CALLOUT ── */
+  .callout {
+    border: 1px solid var(--text);
+    padding: 22px 26px;
+    margin: 32px 0;
+    position: relative;
+    border-radius: 2px;
+  }
+
+  .callout::before {
+    content: attr(data-label);
+    position: absolute;
+    top: -10px;
+    left: 18px;
+    background: var(--bg);
+    padding: 0 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .callout p { margin-bottom: 0; color: var(--text); }
+
+  /* ── CODE ── */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 22px 24px;
+    overflow-x: auto;
+    margin: 22px 0;
+    position: relative;
+  }
+
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  .inline-code {
+    background: var(--code-bg);
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.83rem;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  /* ── PARAM TABLE ── */
+  .param-grid {
+    display: grid;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 28px 0;
+  }
+
+  .param-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  .param-row:last-child { border-bottom: none; }
+  .param-row:hover { background: var(--code-bg); }
+
+  .param-key {
+    padding: 18px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    padding-top: 20px;
+  }
+
+  .param-val {
+    padding: 16px 20px;
+    font-size: 0.93rem;
+    color: #222;
+    line-height: 1.6;
+  }
+
+  .param-val strong {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 3px;
+    color: var(--text);
+  }
+
+  /* ── LOSS CHART ── */
+  .chart-wrap {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 28px;
+    margin: 30px 0;
+    background: var(--code-bg);
+  }
+
+  .chart-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 18px;
+    text-align: center;
+  }
+
+  canvas.loss-chart { width: 100%; border-radius: 4px; }
+
+  .chart-legend {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    margin-top: 14px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.82rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+  }
+
+  .legend-dot {
+    width: 22px; height: 2px;
+    border-radius: 2px;
+  }
+
+  /* ── INTERACTIVE DEMO ── */
+  .demo-box {
+    border: 1px solid var(--text);
+    border-radius: 8px;
+    padding: 30px;
+    margin: 32px 0;
+  }
+
+  .demo-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 22px;
+  }
+
+  .slider-row {
+    display: grid;
+    grid-template-columns: 120px 1fr 50px;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .slider-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text);
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 2px;
+    background: #ccc;
+    outline: none;
+    border-radius: 2px;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--text);
+    cursor: pointer;
+  }
+
+  .slider-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    text-align: right;
+    color: var(--text);
+  }
+
+  .run-btn {
+    margin-top: 6px;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    padding: 12px 30px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: opacity 0.2s;
+  }
+
+  .run-btn:hover { opacity: 0.78; }
+
+  .demo-result {
+    margin-top: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    padding: 14px 18px;
+    border-radius: 4px;
+    min-height: 44px;
+    line-height: 1.6;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 60px 0;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 40px 0 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── FADE IN ── */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .fade-in.visible {
+    opacity: 1;
+    transform: none;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bubble-canvas"></canvas>
+
+<div class="page">
+
+  <!-- HERO -->
+  <header class="hero fade-in">
+    <span class="hero-tag">Machine Learning Tutorial · Deep Learning</span>
+    <h1>Early Stopping:<br><em>The Antidote to Overfitting</em></h1>
+    <p class="hero-sub">A step-by-step guide — what overfitting is, why it happens, and how Early Stopping can prevent it. Every parameter explained clearly.</p>
+  </header>
+
+  <!-- TOC -->
+  <nav class="toc fade-in" aria-label="Table of Contents">
+    <div class="toc-title">On This Page</div>
+    <ol>
+      <li><a href="#overfitting">What is Overfitting?</a></li>
+      <li><a href="#why-stop">Why is Early Stopping Necessary?</a></li>
+      <li><a href="#code">EarlyStopping in Keras</a></li>
+      <li><a href="#params">Every Parameter Explained</a></li>
+      <li><a href="#demo">Interactive Demo</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </nav>
+
+  <!-- SECTION 1 -->
+  <section id="overfitting" class="fade-in">
+    <span class="section-num">01 · Concept</span>
+    <h2>What is Overfitting?</h2>
+
+    <p>Imagine a student who, before an exam, only memorizes previous years' papers — every question, every answer by rote. But when new questions appear, they fail completely. That is <strong>overfitting</strong>.</p>
+
+    <p>A model learns the training data so thoroughly that it memorizes its patterns — including noise and anomalies. On new, unseen data, this model simply does not work.</p>
+
+    <div class="callout" data-label="Simple Definition">
+      <p><strong>Overfitting</strong> occurs when a model performs very well on training data but very poorly on validation/test data. Training loss keeps falling, but validation loss starts rising after a certain point.</p>
+    </div>
+
+    <!-- Loss chart: overfitting -->
+    <div class="chart-wrap">
+      <div class="chart-title">Overfitting — Train Loss vs Val Loss</div>
+      <canvas class="loss-chart" id="overfit-chart" height="220"></canvas>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#111"></div> Train Loss</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#888;border-top:1px dashed #888;height:0;width:22px;"></div> Val Loss</div>
+      </div>
+    </div>
+
+    <p>Notice in the graph above — training loss falls smoothly, but validation loss starts climbing back up after a point. That divergence is the signature of overfitting.</p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION 2 -->
+  <section id="why-stop" class="fade-in">
+    <span class="section-num">02 · Solution</span>
+    <h2>Why is Early Stopping Necessary?</h2>
+
+    <p>If we train a model for too many epochs — say 3500 — it gradually drifts into overfitting territory. The simplest solution is to <strong>stop training at the right moment</strong>.</p>
+
+    <p>Early Stopping is a <strong>callback</strong> that monitors validation loss (or any other metric) during training. When improvement stalls, training halts automatically.</p>
+
+    <div class="callout" data-label="Analogy">
+      <p>Think of a wise coach who says — "If you haven't learned anything new in the last 20 sessions, stop drilling and go practice." That is exactly what Early Stopping does for a model.</p>
+    </div>
+
+    <!-- Loss chart: early stopping -->
+    <div class="chart-wrap">
+      <div class="chart-title">With Early Stopping — Training Halted at the Right Point</div>
+      <canvas class="loss-chart" id="earlystop-chart" height="220"></canvas>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#111"></div> Train Loss</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#999"></div> Val Loss</div>
+        <div class="legend-item" style="font-size:0.78rem;">▲ Stopped Here</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION 3 -->
+  <section id="code" class="fade-in">
+    <span class="section-num">03 · Code</span>
+    <h2>EarlyStopping in Keras</h2>
+
+    <p>Using Early Stopping in TensorFlow/Keras is straightforward — just define a callback and pass it into <span class="inline-code">model.fit()</span>:</p>
+
+    <pre><code>from tensorflow.keras.callbacks import EarlyStopping
+
+# Step 1: Define the callback
+callback = EarlyStopping(
+    monitor    = "val_loss",
+    min_delta  = 0.00001,
+    patience   = 20,
+    verbose    = 1,
+    mode       = "auto",
+    baseline   = None,
+    restore_best_weights = False
+)
+
+# Step 2: Pass it into training
+history = model.fit(
+    X_train, y_train,
+    validation_data = (X_test, y_test),
+    epochs          = 3500,
+    callbacks       = callback   # ← right here
+)</code></pre>
+
+    <p>The model will not run all 3500 epochs — as soon as validation loss stops improving (based on patience), training will stop automatically.</p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION 4 -->
+  <section id="params" class="fade-in">
+    <span class="section-num">04 · Parameters</span>
+    <h2>Every Parameter Explained</h2>
+
+    <p>EarlyStopping has 7 parameters. Let's go through each one:</p>
+
+    <div class="param-grid">
+
+      <div class="param-row">
+        <div class="param-key">monitor</div>
+        <div class="param-val">
+          <strong>What to watch?</strong>
+          Default: <span class="inline-code">"val_loss"</span>. Specifies which value to track during training. Common options: <span class="inline-code">"val_loss"</span>, <span class="inline-code">"val_accuracy"</span>, <span class="inline-code">"loss"</span>.
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="param-key">min_delta</div>
+        <div class="param-val">
+          <strong>How much improvement is enough?</strong>
+          If improvement is less than <span class="inline-code">min_delta</span>, it counts as "no improvement." Example: <span class="inline-code">0.00001</span> means even a tiny 0.001% gain is not considered progress.
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="param-key">patience</div>
+        <div class="param-val">
+          <strong>How many epochs to wait?</strong>
+          If there is no improvement for <span class="inline-code">patience</span> consecutive epochs, training stops. <span class="inline-code">patience=20</span> means wait for 20 epochs before giving up.
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="param-key">verbose</div>
+        <div class="param-val">
+          <strong>Print logs?</strong>
+          <span class="inline-code">0</span> = silent, <span class="inline-code">1</span> = print a message when training stops. Keep it at 1 during development.
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="param-key">mode</div>
+        <div class="param-val">
+          <strong>Direction of improvement?</strong>
+          <span class="inline-code">"min"</span> = for loss (should decrease), <span class="inline-code">"max"</span> = for accuracy (should increase), <span class="inline-code">"auto"</span> = Keras infers it automatically.
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="param-key">baseline</div>
+        <div class="param-val">
+          <strong>Minimum standard to beat?</strong>
+          If set, the model must first reach this value before Early Stopping activates. Set to <span class="inline-code">None</span> for no baseline requirement.
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="param-key">restore_best_weights</div>
+        <div class="param-val">
+          <strong>Roll back to the best state?</strong>
+          When <span class="inline-code">True</span>, the model reverts to the weights from its best epoch. In production, this should always be <span class="inline-code">True</span>!
+        </div>
+      </div>
+
+    </div>
+
+    <div class="callout" data-label="Pro Tip">
+      <p>In practice: <span class="inline-code">patience=10–50</span>, <span class="inline-code">restore_best_weights=True</span>, and <span class="inline-code">monitor="val_loss"</span> is a safe, effective combination for most problems.</p>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION 5: INTERACTIVE DEMO -->
+  <section id="demo" class="fade-in">
+    <span class="section-num">05 · Interactive</span>
+    <h2>Simulate It: Adjust the Parameters</h2>
+
+    <p>Use the sliders below to tweak <span class="inline-code">patience</span> and <span class="inline-code">min_delta</span> and see at which epoch training stops:</p>
+
+    <div class="demo-box">
+      <div class="demo-title">Early Stopping Simulator</div>
+
+      <div class="slider-row">
+        <span class="slider-label">patience</span>
+        <input type="range" id="sl-patience" min="1" max="100" value="20">
+        <span class="slider-val" id="val-patience">20</span>
+      </div>
+
+      <div class="slider-row">
+        <span class="slider-label">min_delta</span>
+        <input type="range" id="sl-delta" min="1" max="100" value="10">
+        <span class="slider-val" id="val-delta">0.0001</span>
+      </div>
+
+      <div class="slider-row">
+        <span class="slider-label">max epochs</span>
+        <input type="range" id="sl-epochs" min="50" max="3500" step="50" value="3500">
+        <span class="slider-val" id="val-epochs">3500</span>
+      </div>
+
+      <button class="run-btn" id="run-sim">▶ Simulate</button>
+
+      <div class="demo-result" id="sim-result">Adjust the sliders and hit Simulate…</div>
+
+      <canvas class="loss-chart" id="demo-chart" height="200" style="margin-top:20px;"></canvas>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION 6 -->
+  <section id="summary" class="fade-in">
+    <span class="section-num">06 · Summary</span>
+    <h2>Summary</h2>
+
+    <p>Here is what we covered today:</p>
+
+    <div class="param-grid">
+      <div class="param-row">
+        <div class="param-key">Overfitting</div>
+        <div class="param-val">The model memorizes training data and fails on new, unseen data.</div>
+      </div>
+      <div class="param-row">
+        <div class="param-key">Early Stopping</div>
+        <div class="param-val">Monitors validation loss and stops training at the right moment.</div>
+      </div>
+      <div class="param-row">
+        <div class="param-key">patience</div>
+        <div class="param-val">How many epochs to wait before stopping when no improvement is seen.</div>
+      </div>
+      <div class="param-row">
+        <div class="param-key">min_delta</div>
+        <div class="param-val">How small an improvement counts as "no change."</div>
+      </div>
+      <div class="param-row">
+        <div class="param-key">restore_best_weights</div>
+        <div class="param-val">Always set to True in production — restores the model's best state.</div>
+      </div>
+    </div>
+
+    <pre><code># Production-ready Early Stopping
+callback = EarlyStopping(
+    monitor              = "val_loss",
+    patience             = 20,
+    min_delta            = 0.0001,
+    mode                 = "auto",
+    restore_best_weights = True,  # ← always include this!
+    verbose              = 1
+)</code></pre>
+  </section>
+
+</div>
+
+<footer>Early Stopping Tutorial · TensorFlow / Keras · Machine Learning</footer>
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════ -->
+<script>
+/* ── BUBBLE CANVAS ── */
+const canvas = document.getElementById('bubble-canvas');
+const ctx = canvas.getContext('2d');
+
+let W, H, bubbles = [];
+
+const RAINBOW = [
+  '#FF0000','#FF3300','#FF6600','#FF9900','#FFCC00',
+  '#FFFF00','#CCFF00','#66FF00','#00FF66','#00FFCC',
+  '#00CCFF','#0099FF','#0033FF','#6600FF','#CC00FF',
+  '#FF00CC','#FF0066','#FF0033'
+];
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+
+function makeBubble() {
+  const r = 10 + Math.random() * 36;
+  return {
+    x: Math.random() * W,
+    y: H + r + Math.random() * 200,
+    r,
+    color: RAINBOW[Math.floor(Math.random() * RAINBOW.length)],
+    speed: 0.4 + Math.random() * 1.0,
+    drift: (Math.random() - 0.5) * 0.5,
+    wobble: Math.random() * Math.PI * 2,
+    wobbleSpeed: 0.015 + Math.random() * 0.025,
+    opacity: 0.18 + Math.random() * 0.32
+  };
+}
+
+function initBubbles() {
+  bubbles = [];
+  for (let i = 0; i < 55; i++) {
+    const b = makeBubble();
+    b.y = Math.random() * H; // spread on start
+    bubbles.push(b);
+  }
+}
+
+function drawBubble(b) {
+  ctx.save();
+  ctx.globalAlpha = b.opacity;
+  const grad = ctx.createRadialGradient(
+    b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.05,
+    b.x, b.y, b.r
+  );
+  grad.addColorStop(0, '#ffffff');
+  grad.addColorStop(0.3, b.color + 'cc');
+  grad.addColorStop(1, b.color + '22');
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  // rim
+  ctx.strokeStyle = b.color + '88';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // shine
+  ctx.beginPath();
+  ctx.arc(b.x - b.r * 0.28, b.y - b.r * 0.28, b.r * 0.22, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fill();
+  ctx.restore();
+}
+
+function animBubbles() {
+  ctx.clearRect(0, 0, W, H);
+  bubbles.forEach(b => {
+    b.wobble += b.wobbleSpeed;
+    b.x += Math.sin(b.wobble) * 0.7 + b.drift;
+    b.y -= b.speed;
+    drawBubble(b);
+    if (b.y < -b.r * 2) {
+      Object.assign(b, makeBubble());
+    }
+  });
+  requestAnimationFrame(animBubbles);
+}
+
+window.addEventListener('resize', () => { resize(); initBubbles(); });
+resize(); initBubbles(); animBubbles();
+
+/* ── LOSS CHART HELPER ── */
+function drawLossChart(id, trainData, valData, stopAt) {
+  const c = document.getElementById(id);
+  if (!c) return;
+  const cx = c.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  c.width  = rect.width  * dpr;
+  c.height = 220 * dpr;
+  cx.scale(dpr, dpr);
+  const W = rect.width, H = 220;
+  const pad = { t: 12, r: 18, b: 36, l: 44 };
+  const gW = W - pad.l - pad.r;
+  const gH = H - pad.t - pad.b;
+
+  cx.clearRect(0, 0, W, H);
+
+  const allVals = [...trainData, ...valData].filter(v => isFinite(v));
+  const minV = Math.min(...allVals) * 0.95;
+  const maxV = Math.max(...allVals) * 1.05;
+
+  const xp = i => pad.l + (i / (trainData.length - 1)) * gW;
+  const yp = v => pad.t + (1 - (v - minV) / (maxV - minV)) * gH;
+
+  // Grid
+  cx.strokeStyle = '#e8e8e8';
+  cx.lineWidth = 1;
+  for (let g = 0; g <= 4; g++) {
+    const y = pad.t + (g / 4) * gH;
+    cx.beginPath(); cx.moveTo(pad.l, y); cx.lineTo(pad.l + gW, y); cx.stroke();
+    const val = maxV - (g / 4) * (maxV - minV);
+    cx.fillStyle = '#aaa';
+    cx.font = '10px JetBrains Mono, monospace';
+    cx.textAlign = 'right';
+    cx.fillText(val.toFixed(2), pad.l - 6, y + 4);
+  }
+
+  // Stop line
+  if (stopAt !== undefined) {
+    cx.setLineDash([4, 4]);
+    cx.strokeStyle = '#555';
+    cx.lineWidth = 1.2;
+    const sx = xp(stopAt);
+    cx.beginPath(); cx.moveTo(sx, pad.t); cx.lineTo(sx, pad.t + gH); cx.stroke();
+    cx.setLineDash([]);
+    cx.fillStyle = '#333';
+    cx.font = 'bold 10px JetBrains Mono, monospace';
+    cx.textAlign = 'center';
+    cx.fillText('▲ Stop', sx, pad.t + gH + 22);
+  }
+
+  // Draw line helper
+  function drawLine(data, color, dash) {
+    cx.beginPath();
+    cx.setLineDash(dash || []);
+    cx.strokeStyle = color;
+    cx.lineWidth = 2;
+    data.forEach((v, i) => {
+      if (!isFinite(v)) return;
+      i === 0 ? cx.moveTo(xp(i), yp(v)) : cx.lineTo(xp(i), yp(v));
+    });
+    cx.stroke();
+    cx.setLineDash([]);
+  }
+
+  drawLine(trainData, '#111');
+  drawLine(valData, '#888', [6, 3]);
+
+  // X axis labels
+  cx.fillStyle = '#aaa';
+  cx.font = '10px JetBrains Mono, monospace';
+  cx.textAlign = 'center';
+  for (let g = 0; g <= 4; g++) {
+    const i = Math.round((g / 4) * (trainData.length - 1));
+    cx.fillText(i, xp(i), H - 8);
+  }
+  cx.fillStyle = '#bbb';
+  cx.textAlign = 'center';
+  cx.fillText('epochs →', pad.l + gW / 2, H - 0);
+}
+
+/* ── GENERATE SYNTHETIC LOSS DATA ── */
+function genLoss(epochs, overfit = true) {
+  const train = [], val = [];
+  let tl = 1.0, vl = 1.0;
+  let bestV = 1.0, stagnation = 0;
+  for (let i = 0; i < epochs; i++) {
+    tl *= (0.992 + Math.random() * 0.006);
+    tl = Math.max(tl, 0.04);
+    const phase = i / epochs;
+    if (overfit && phase > 0.35) {
+      vl = bestV + (phase - 0.35) * 0.8 + (Math.random() - 0.3) * 0.02;
+    } else {
+      vl *= (0.994 + Math.random() * 0.007);
+      vl = Math.max(vl, 0.06);
+      if (vl < bestV) bestV = vl;
+    }
+    train.push(tl);
+    val.push(vl);
+  }
+  return { train, val };
+}
+
+function genEarlyStop(epochs, patience, minDelta) {
+  const train = [], val = [];
+  let tl = 1.0, vl = 1.0, bestV = 1.0, wait = 0;
+  let stopped = epochs;
+  for (let i = 0; i < epochs; i++) {
+    tl *= (0.992 + Math.random() * 0.006);
+    tl = Math.max(tl, 0.04);
+    vl *= (0.993 + Math.random() * 0.007);
+    vl = Math.max(vl, 0.06);
+    const improve = bestV - vl;
+    if (improve > minDelta) { bestV = vl; wait = 0; }
+    else { wait++; }
+    train.push(tl);
+    val.push(vl);
+    if (wait >= patience && stopped === epochs) { stopped = i; }
+  }
+  return { train, val, stopped };
+}
+
+/* Draw static charts */
+window.addEventListener('load', () => {
+  const { train: t1, val: v1 } = genLoss(200, true);
+  drawLossChart('overfit-chart', t1, v1);
+
+  const { train: t2, val: v2, stopped } = genEarlyStop(200, 20, 0.0005);
+  drawLossChart('earlystop-chart', t2, v2, stopped);
+});
+
+/* ── SLIDERS ── */
+const slPatience = document.getElementById('sl-patience');
+const slDelta    = document.getElementById('sl-delta');
+const slEpochs   = document.getElementById('sl-epochs');
+
+const deltaVals = Array.from({length: 100}, (_, i) => {
+  const v = 0.000001 * Math.pow(100000, i/99);
+  return parseFloat(v.toExponential(1));
+});
+
+function updateSliderLabels() {
+  document.getElementById('val-patience').textContent = slPatience.value;
+  document.getElementById('val-delta').textContent    = deltaVals[+slDelta.value - 1].toExponential(0);
+  document.getElementById('val-epochs').textContent   = slEpochs.value;
+}
+slPatience.addEventListener('input', updateSliderLabels);
+slDelta.addEventListener('input', updateSliderLabels);
+slEpochs.addEventListener('input', updateSliderLabels);
+
+document.getElementById('run-sim').addEventListener('click', () => {
+  const patience  = +slPatience.value;
+  const minDelta  = deltaVals[+slDelta.value - 1];
+  const maxEpochs = +slEpochs.value;
+
+  const { train, val, stopped } = genEarlyStop(maxEpochs, patience, minDelta);
+  drawLossChart('demo-chart', train, val, stopped < maxEpochs ? stopped : undefined);
+
+  const res = document.getElementById('sim-result');
+  if (stopped < maxEpochs) {
+    const saved = maxEpochs - stopped;
+    res.textContent =
+      `✓ Training stopped at epoch ${stopped + 1} — before the ${maxEpochs} epoch limit!\n` +
+      `  ${saved} extra epochs saved (${((saved/maxEpochs)*100).toFixed(1)}% less computation).`;
+  } else {
+    res.textContent =
+      `Training ran all ${maxEpochs} epochs without early stopping.\n` +
+      `Try increasing patience or lowering min_delta to trigger early stopping.`;
+  }
+});
+
+/* ── FADE-IN OBSERVER ── */
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.08 });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
